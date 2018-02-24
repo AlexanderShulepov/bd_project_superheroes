@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>JLDB</title>
+
+    <style type="text/css">
+        body1 {
+            font: 10pt Arial, Helvetica, sans-serif;
+            /* Шрифт на веб-странице */
+            background: #54463d;
+            /* Цвет фона */
+            margin: 0;
+            /* Убираем отступы */
+        }
+
+        body {
+            background: #F2F2F2;
+            max-width: 98%;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #4C4C4C;
+            text-align: center;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #BEBEBE;
+        }
+        
+        h2 {
+            color: #4C4C4C;
+            text-align: left;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #BEBEBE;
+        }
+        
+        h3 {
+            color: #4C4C4C;
+            text-align: left;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #BEBEBE;
+        }
+
+        p {
+            font: italic;
+        }
+
+        #map {
+            height: 400px;
+            width: 98%;
+        }
+
+        #container {
+            width: 98%;
+            /* Общая ширина макета */
+            margin: 0 auto;
+            /* Выравниваем по центру */
+        }
+
+        #leftcol {
+            float: left;
+            background: #F2F2F2;
+            width: 70%;
+        }
+
+        #rightcol {
+            float: left;
+            background: #F2F2F2;
+            width: 30%;
+        }
+
+        #footer {
+            background: #C0C0C0;
+            /* Цвет фона */
+            padding: 5px;
+            /* Отступы вокруг текста */
+        }
+
+        .clear {
+            clear: both;
+        }
+    </style>
+
+    <script>
+        var markers = [];
+
+        function initMap() {
+            var uluru = {
+                lat: 57.151203,
+                lng: 65.537161
+            };
+            var map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 13,
+                center: uluru
+            }); //map
+
+            function addtomap(loc) {
+                loc = JSON.parse(loc[0])
+
+                var marker = new google.maps.Marker({
+                    position: {
+                        lat: loc.coordinates[0],
+                        lng: loc.coordinates[1]
+                    },
+                    map: map,
+                    title: "Marker for hero"
+                    //icon:'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+                }); //
+                markers.push(marker)
+                marker.addListener('click', AjaxStatHero);
+                var speed = new google.maps.Circle({
+                    strokeColor: '#FF0000',
+                    strokeOpacity: 0.8,
+                    strokeWeight: 2,
+                    fillColor: '#FF0000',
+                    fillOpacity: 0.35,
+                    map: map,
+                    center: {
+                        lat: loc.coordinates[0],
+                        lng: loc.coordinates[1]
+                    },
+                    radius: 500
+                }); //speed
+                markers.push(speed)
+            }
+
+            function AjaxStatHero(id)
+    {
+        var req = new XMLHttpRequest()
+        req.onreadystatechange = function()
+        {
+            if (req.readyState == 4)
+            {
+                if (req.status != 200)
+                {
+                    //error handling code here
+                }
+                else
+                {
+                	
+                    var response = JSON.parse(req.responseText)
+                    document.getElementById('n').innerHTML=response.answer[0][0];
+                    document.getElementById('d').innerHTML=response.answer[0][1]/1000;
+                    document.getElementById('s').innerHTML=response.answer[0][2];
+
+
+
+                }
+            }
+        }
+    
+        req.open('POST', '/ajax')
+        req.setRequestHeader("Content-type", "application/x-www-form-urlencoded")
+        var postVars = 'type=2&id='+id.toString()
+        req.send(postVars)
+        
+        return false
+    }
+
+            function AjaxCoord() {
+                var req = new XMLHttpRequest()
+                req.onreadystatechange = function() {
+                    if (req.readyState == 4) {
+                        if (req.status != 200) {
+                            //error handling code here
+                        } else {
+                            var response = JSON.parse(req.responseText)
+                            for (var i = 0; i < markers.length; i++) {
+                                markers[i].setMap(null)
+                            } //for очистка
+
+                            markers = []
+                            for (var i = 0; i < response.heroes.length; i++) {
+                                //alert(response.heroes[i][1][0])
+                                var marker = new google.maps.Marker({
+                                    position: {
+                                        lat: response.heroes[i][1][0],
+                                        lng: response.heroes[i][1][1]
+                                    },
+                                    map: map,
+                                    title: response.heroes[i][0].toString(),
+                                    icon: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
+                                }); //marker heroes
+                                
+                                marker.addListener('click', function() {
+								    AjaxStatHero(this.title);
+								});
+								markers.push(marker)
+								
+                                var speed = new google.maps.Circle({
+                                    strokeColor: '#FF0000',
+                                    strokeOpacity: 0.8,
+                                    strokeWeight: 2,
+                                    fillColor: '#FF0000',
+                                    fillOpacity: 0.35,
+                                    map: map,
+                                    center: {
+                                        lat: response.heroes[i][1][0],
+                                        lng: response.heroes[i][1][1]
+                                    },
+                                    radius: response.heroes[i][2]/10
+                                }); //speed
+                                markers.push(speed)
+
+                            } //for
+
+
+                            for (var i = 0; i < response.alarms.length; i++) {
+                                var marker = new google.maps.Marker({
+                                    position: {
+                                        lat: response.alarms[i][0],
+                                        lng: response.alarms[i][1]
+                                    },
+                                    map: map,
+                                    title: "Just alarm",
+                                    icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+                                }); //marker alarms
+                                markers.push(marker)
+                            } //for
+
+                            for (var i = 0; i < response.hospitals.length; i++) {
+                                var marker = new google.maps.Marker({
+                                    position: {
+                                        lat: response.hospitals[i][0],
+                                        lng: response.hospitals[i][1]
+                                    },
+                                    map: map,
+                                    title: "Just hospital",
+                                    icon: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png'
+                                }); //marker hospitals
+                                markers.push(marker)
+                            } //for
+
+                            for (var i = 0; i < response.calls.length; i++) {
+                            	//hero 
+                                var marker = new google.maps.Marker({
+                                    position: {
+                                        lat: response.calls[i][1][0],
+                                        lng: response.calls[i][1][1]
+                                    },
+                                    map: map,
+                                    title: response.calls[i][0].toString(),
+                                    icon: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
+                                }); //marker heroes
+                                //alert(marker.title)
+                                marker.addListener('click', function() {
+								    AjaxStatHero(this.title);
+								});
+								markers.push(marker)
+                                var speed = new google.maps.Circle({
+                                    strokeColor: '#FF0000',
+                                    strokeOpacity: 0.8,
+                                    strokeWeight: 2,
+                                    fillColor: '#FF0000',
+                                    fillOpacity: 0.35,
+                                    map: map,
+                                    center: {
+                                        lat: response.calls[i][1][0],
+                                        lng: response.calls[i][1][1]
+                                    },
+                                    radius: response.calls[i][4]/10
+                                }); //speed
+                                markers.push(speed)
+
+                                //alarm
+                                var marker = new google.maps.Marker({
+                                    position: {
+                                        lat: response.calls[i][2][0],
+                                        lng: response.calls[i][2][1]
+                                    },
+                                    map: map,
+                                    title: "Just alarm",
+                                    icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+                                }); //marker alarms
+                                markers.push(marker)
+                                //hospitals
+                                
+                                var marker = new google.maps.Marker({
+                                    position: {
+                                        lat: response.calls[i][3][0],
+                                        lng: response.calls[i][3][1]
+                                    },
+                                    map: map,
+                                    title: "Just hospital",
+                                    icon: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png'
+                                }); //marker hospitals
+                                markers.push(marker)
+
+                            } //for
+
+
+
+                        } //else
+                    }
+                }
+
+                req.open('POST', '/ajax')
+                req.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+                var postVars = 'type=1';
+                req.send(postVars)
+
+                return false
+            }
+            setInterval(AjaxCoord, 5000)
+        } //initmap
+    </script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBNailX0Ja-ePiuL-8x7fmpxq9tOot9j7k&callback=initMap">
+    </script>
+</head>
+
+<body>
+    <div id="container">
+        <h1>Map of heroes</h1>
+        <div id="leftcol">
+            <h2>Map</h2>
+            <div id="map"></div>
+        </div>
+        <div id="rightcol"> 
+<h2>Hero statistics</h2> 
+<h3>Name: <div id='n'></div></h3> 
+<br> 
+<h3>Distance: <div id='d'></div></h3> 
+<br> 
+<h3>Success: <div id='s'></div></h3> 
+</div>
+    </div>
+</body>
+
+</html>
